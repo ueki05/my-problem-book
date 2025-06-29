@@ -1,103 +1,110 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BookOpen, FileText, PlusSquare } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // ダミーデータ
+  const reviewCount = 5;
+  const problemSets = ["宅建 権利関係", "宅建 宅建業法", "宅建 法令上の制限"];
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* ヘッダー */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">資格勉強アプリ</h1>
+          <p className="text-sm text-gray-600 mt-1">忘却曲線に基づく効率的な復習</p>
         </div>
+      </header>
+
+      {/* メインコンテンツ */}
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <Tabs defaultValue="review" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="review" className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              復習
+            </TabsTrigger>
+            <TabsTrigger value="problems" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              問題集
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="review" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>今日の復習</CardTitle>
+                <CardDescription>
+                  忘却曲線に基づいて、今日復習すべき問題が表示されます
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {reviewCount > 0 ? (
+                  <div className="text-center py-6">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+                    <p className="text-lg font-medium text-gray-900 mb-4">
+                      復習が必要な問題が {reviewCount} 問あります。
+                    </p>
+                    <Link href="/review">
+                      <Button className="bg-blue-600 hover:bg-blue-700">
+                        復習を開始する
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 text-green-600" />
+                    <p className="text-lg font-medium text-gray-900">
+                      今日の復習はありません。素晴らしい！
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="problems" className="space-y-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">問題集一覧</h2>
+              <Link href="/problems/new">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <PlusSquare className="w-4 h-4" />
+                  問題集追加
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="grid gap-4">
+              {problemSets.map((problemSet, index) => (
+                <Link 
+                  key={index} 
+                  href={`/problems/${encodeURIComponent(problemSet)}`}
+                  className="block"
+                >
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-gray-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-gray-600" />
+                          <span className="font-medium text-gray-900">{problemSet}</span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          問題数: 0問
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
