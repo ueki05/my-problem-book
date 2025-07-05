@@ -1,15 +1,49 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, PlusSquare } from "lucide-react";
+import { BookOpen, FileText, PlusSquare, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Database } from "@/lib/database.types";
+
+type ProblemSet = Database["public"]["Tables"]["problem_sets"]["Row"];
 
 export default function Home() {
-  // ダミーデータ
+  const [problemSets, setProblemSets] = useState<ProblemSet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // ダミーデータ（復習機能は後で実装）
   const reviewCount = 5;
-  const problemSets = ["宅建 権利関係", "宅建 宅建業法", "宅建 法令上の制限"];
+
+  useEffect(() => {
+    fetchProblemSets();
+  }, []);
+
+  const fetchProblemSets = async () => {
+    try {
+      const supabase = createClient();
+      
+      const { data, error } = await supabase
+        .from("problem_sets")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setProblemSets(data || []);
+    } catch (err) {
+      console.error("Error fetching problem sets:", err);
+      setError("問題集の取得に失敗しました。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -79,29 +113,72 @@ export default function Home() {
               </Link>
             </div>
             
-            <div className="grid gap-4">
-              {problemSets.map((problemSet, index) => (
-                <Link 
-                  key={index} 
-                  href={`/problems/${encodeURIComponent(problemSet)}`}
-                  className="block"
-                >
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-gray-50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-gray-600" />
-                          <span className="font-medium text-gray-900">{problemSet}</span>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-gray-400" />
+                <p className="text-gray-600">問題集を読み込み中...</p>
+              </div>
+            ) : error ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center text-red-600">
+                    <p>{error}</p>
+                    <Button 
+                      onClick={fetchProblemSets} 
+                      variant="outline" 
+                      className="mt-4"
+                    >
+                      再試行
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : problemSets.length === 0 ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-600 mb-4">まだ問題集がありません</p>
+                    <Link href="/problems/new">
+                      <Button className="bg-blue-600 hover:bg-blue-700">
+                        最初の問題集を作成
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {problemSets.map((problemSet) => (
+                  <Link 
+                    key={problemSet.id} 
+                    href={`/problems/${encodeURIComponent(problemSet.id)}`}
+                    className="block"
+                  >
+                    <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-gray-50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <FileText className="w-5 h-5 text-gray-600" />
+                              <span className="font-medium text-gray-900">{problemSet.title}</span>
+                            </div>
+                            {problemSet.description && (
+                              <p className="text-sm text-gray-600 ml-8">
+                                {problemSet.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            問題数: 0問
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          問題数: 0問
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </main>
