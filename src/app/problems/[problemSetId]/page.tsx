@@ -1,12 +1,9 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, FileText, Image, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Image } from "lucide-react";
 
 type ProblemSet = Database["public"]["Tables"]["problem_sets"]["Row"];
 type Problem = Database["public"]["Tables"]["problems"]["Row"];
@@ -17,68 +14,52 @@ interface ProblemSetPageProps {
   }>;
 }
 
-export default function ProblemSetPage({ params }: ProblemSetPageProps) {
-  const [problemSet, setProblemSet] = useState<ProblemSet | null>(null);
-  const [problems, setProblems] = useState<Problem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+async function getProblemSetData(problemSetId: string): Promise<{ problemSet: ProblemSet | null; problems: Problem[]; error?: string }> {
+  try {
+    const supabase = await createClient();
+    
+    // 現在ログインしているユーザーを取得
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { problemSet: null, problems: [], error: "ログインが必要です" };
+    }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { problemSetId } = await params;
-        const decodedProblemSetId = decodeURIComponent(problemSetId);
-        
-        const supabase = createClient();
-        
-        // 問題集データを取得
-        const { data: problemSetData, error: problemSetError } = await supabase
-          .from("problem_sets")
-          .select("*")
-          .eq("id", decodedProblemSetId)
-          .single();
+    // 問題集データを取得
+    const { data: problemSetData, error: problemSetError } = await supabase
+      .from("problem_sets")
+      .select("*")
+      .eq("id", problemSetId)
+      .eq("user_id", user.id)
+      .single();
 
-        if (problemSetError) {
-          throw problemSetError;
-        }
+    if (problemSetError) {
+      return { problemSet: null, problems: [], error: "問題集が見つかりません" };
+    }
 
-        setProblemSet(problemSetData);
+    // 問題データを取得
+    const { data: problemsData, error: problemsError } = await supabase
+      .from("problems")
+      .select("*")
+      .eq("problem_set_id", problemSetId)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
 
-        // 問題データを取得
-        const { data: problemsData, error: problemsError } = await supabase
-          .from("problems")
-          .select("*")
-          .eq("problem_set_id", decodedProblemSetId)
-          .order("created_at", { ascending: true });
+    if (problemsError) {
+      return { problemSet: problemSetData, problems: [], error: "問題の取得に失敗しました" };
+    }
 
-        if (problemsError) {
-          throw problemsError;
-        }
-
-        setProblems(problemsData || []);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("データの取得に失敗しました。");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [params]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-gray-400" />
-            <p className="text-gray-600">読み込み中...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return { problemSet: problemSetData, problems: problemsData || [] };
+  } catch (err) {
+    console.error("Error fetching data:", err);
+    return { problemSet: null, problems: [], error: "データの取得に失敗しました" };
   }
+}
+
+export default async function ProblemSetPage({ params }: ProblemSetPageProps) {
+  const { problemSetId } = await params;
+  const decodedProblemSetId = decodeURIComponent(problemSetId);
+  const { problemSet, problems, error } = await getProblemSetData(decodedProblemSetId);
 
   if (error || !problemSet) {
     return (
@@ -97,8 +78,8 @@ export default function ProblemSetPage({ params }: ProblemSetPageProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ヘッダー */}
-      <header className="bg-white shadow-sm border-b">
+      {/* ページヘッダー */}
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link 
@@ -116,7 +97,7 @@ export default function ProblemSetPage({ params }: ProblemSetPageProps) {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-6">

@@ -1,60 +1,64 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, PlusSquare, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { BookOpen, FileText, PlusSquare } from "lucide-react";
+import { createClient } from '@/lib/supabase/server';
 import { Database } from "@/lib/database.types";
 
 type ProblemSet = Database["public"]["Tables"]["problem_sets"]["Row"];
 
-export default function Home() {
-  const [problemSets, setProblemSets] = useState<ProblemSet[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+async function getProblemSets(): Promise<ProblemSet[]> {
+  const supabase = await createClient();
+  
+  // 現在ログインしているユーザーを取得
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return [];
+  }
 
+  const { data, error } = await supabase
+    .from("problem_sets")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching problem sets:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const problemSets = await getProblemSets();
+  
   // ダミーデータ（復習機能は後で実装）
   const reviewCount = 5;
 
-  useEffect(() => {
-    fetchProblemSets();
-  }, []);
-
-  const fetchProblemSets = async () => {
-    try {
-      const supabase = createClient();
-      
-      const { data, error } = await supabase
-        .from("problem_sets")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      setProblemSets(data || []);
-    } catch (err) {
-      console.error("Error fetching problem sets:", err);
-      setError("問題集の取得に失敗しました。");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ログインしていない場合はログインページにリダイレクト
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">資格勉強アプリ</h1>
+          <p className="text-gray-600 mb-6">ログインして問題集を管理しましょう</p>
+          <Link href="/login">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              ログイン
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ヘッダー */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">資格勉強アプリ</h1>
-          <p className="text-sm text-gray-600 mt-1">忘却曲線に基づく効率的な復習</p>
-        </div>
-      </header>
-
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-6">
         <Tabs defaultValue="review" className="w-full">
@@ -113,32 +117,12 @@ export default function Home() {
               </Link>
             </div>
             
-            {isLoading ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-gray-400" />
-                <p className="text-gray-600">問題集を読み込み中...</p>
-              </div>
-            ) : error ? (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-center text-red-600">
-                    <p>{error}</p>
-                    <Button 
-                      onClick={fetchProblemSets} 
-                      variant="outline" 
-                      className="mt-4"
-                    >
-                      再試行
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : problemSets.length === 0 ? (
+            {problemSets.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-600 mb-4">まだ問題集がありません</p>
+                    <p className="text-gray-600 mb-4">問題集がありません。最初の問題集を作成しましょう。</p>
                     <Link href="/problems/new">
                       <Button className="bg-blue-600 hover:bg-blue-700">
                         最初の問題集を作成

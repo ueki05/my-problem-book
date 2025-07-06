@@ -1,54 +1,11 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createProblemSet } from "@/app/actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, ArrowLeft } from "lucide-react";
 
 export default function NewProblemSetPage() {
-  const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const supabase = createClient();
-      
-              const { data, error } = await supabase
-          .from("problem_sets")
-          .insert([
-            {
-              title,
-              description,
-              created_at: new Date().toISOString(),
-              user_id: "temp-user", // 一時的なダミーID（認証機能実装後に変更）
-            }
-          ])
-          .select()
-          .single();
-
-      if (error) {
-        throw error;
-      }
-
-      // 作成成功後、問題集詳細ページにリダイレクト
-      router.push(`/problems/${encodeURIComponent(data.id)}`);
-    } catch (err) {
-      console.error("Error creating problem set:", err);
-      setError("問題集の作成に失敗しました。もう一度お試しください。");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -78,49 +35,24 @@ export default function NewProblemSetPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form action={createProblemSet} className="space-y-4">
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                  問題集タイトル *
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  問題集名 *
                 </label>
-                <input
+                <Input
                   type="text"
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  id="name"
+                  name="name"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="例: 宅建 権利関係"
+                  className="w-full"
                 />
               </div>
-
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                  説明
-                </label>
-                <textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="問題集の説明を入力してください（任意）"
-                />
-              </div>
-
-              {error && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                  {error}
-                </div>
-              )}
 
               <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={isLoading || !title.trim()}
-                  className="flex-1"
-                >
-                  {isLoading ? "作成中..." : "問題集を作成"}
+                <Button type="submit" className="flex-1">
+                  問題集を作成
                 </Button>
                 <Link href="/">
                   <Button type="button" variant="outline">
