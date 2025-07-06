@@ -170,7 +170,7 @@ export default async function Home() {
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <FileText className="w-5 h-5 text-gray-600" />
-                              <span className="font-medium text-gray-900">{problemSet.title}</span>
+                              <span className="font-medium text-gray-900">{problemSet.name}</span>
                             </div>
                             {problemSet.description && (
                               <p className="text-sm text-gray-600 ml-8">

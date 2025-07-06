@@ -17,28 +17,27 @@ export async function createProblemSet(formData: FormData) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   
   if (userError || !user) {
-    throw new Error('ログインが必要です');
+    redirect('/login');
   }
 
-  try {
-    const { error } = await supabase
-      .from('problem_sets')
-      .insert({
-        title: name.trim(),
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-      });
+  // 問題集をデータベースに挿入
+  const { error } = await supabase
+    .from('problem_sets')
+    .insert({
+      name: name.trim(),
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    revalidatePath('/');
-    redirect('/');
-  } catch (error) {
+  // エラーが発生した場合はコンソールに出力して処理を終了
+  if (error) {
     console.error('Error creating problem set:', error);
-    throw new Error('問題集の作成に失敗しました');
+    return;
   }
+
+  // 成功した場合のみリダイレクト処理を実行
+  revalidatePath('/');
+  redirect('/');
 }
 
 export async function signOut() {
