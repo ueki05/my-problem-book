@@ -7,8 +7,13 @@ import { createClient } from '@/lib/supabase/server';
 import { Database } from "@/lib/database.types";
 
 type ProblemSet = Database["public"]["Tables"]["problem_sets"]["Row"];
+type Problem = Database["public"]["Tables"]["problems"]["Row"];
 
-async function getProblemSets(): Promise<ProblemSet[]> {
+interface ProblemSetWithCount extends ProblemSet {
+  problem_count: number;
+}
+
+async function getProblemSets(): Promise<ProblemSetWithCount[]> {
   const supabase = await createClient();
   
   // 現在ログインしているユーザーを取得
@@ -18,9 +23,13 @@ async function getProblemSets(): Promise<ProblemSet[]> {
     return [];
   }
 
+  // 問題集と問題数を取得
   const { data, error } = await supabase
     .from("problem_sets")
-    .select("*")
+    .select(`
+      *,
+      problems!inner(count)
+    `)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -29,7 +38,23 @@ async function getProblemSets(): Promise<ProblemSet[]> {
     return [];
   }
 
-  return data || [];
+  // 問題数を計算
+  const problemSetsWithCount = await Promise.all(
+    (data || []).map(async (problemSet) => {
+      const { count } = await supabase
+        .from("problems")
+        .select("*", { count: "exact", head: true })
+        .eq("problem_set_id", problemSet.id)
+        .eq("user_id", user.id);
+
+      return {
+        ...problemSet,
+        problem_count: count || 0,
+      };
+    })
+  );
+
+  return problemSetsWithCount;
 }
 
 export default async function Home() {
@@ -154,7 +179,7 @@ export default async function Home() {
                             )}
                           </div>
                           <div className="text-sm text-gray-500">
-                            問題数: 0問
+                            問題数: {problemSet.problem_count}問
                           </div>
                         </div>
                       </CardContent>
