@@ -49,85 +49,148 @@ export async function signOut() {
   redirect('/login');
 }
 
-export async function createProblem(formData: FormData, problemSetId: string) {
-  const supabase = await createClient();
-  
-  // 現在ログインしているユーザーを取得
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  
-  if (userError || !user) {
-    throw new Error('ログインが必要です');
-  }
+// テスト用のシンプルなサーバーアクション
+export async function testServerAction() {
+  console.log('=== testServerAction started ===');
+  return { success: true, message: 'Server action is working' };
+}
+
+export async function createProblem(data: {
+  problemSetId: string;
+  questionImageBase64: string;
+  answerImageBase64: string;
+}): Promise<{ success: boolean; error?: string }> {
+  console.log('=== createProblem started ===');
+  console.log('Problem Set ID:', data.problemSetId);
+  console.log('Question Image Base64 length:', data.questionImageBase64.length);
+  console.log('Answer Image Base64 length:', data.answerImageBase64.length);
 
   try {
-    // フォームデータから画像ファイルを取得
-    const questionImage = formData.get('question_image') as File;
-    const answerImage = formData.get('answer_image') as File;
+    const supabase = await createClient();
 
-    if (!questionImage || !answerImage) {
-      throw new Error('問題画像と解答画像の両方が必要です');
+    // ユーザー認証を確認
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('=== createProblem: Auth error ===', authError);
+      return { success: false, error: '認証エラーが発生しました' };
     }
 
-    // ファイルサイズチェック（5MB制限）
-    if (questionImage.size > 5 * 1024 * 1024 || answerImage.size > 5 * 1024 * 1024) {
-      throw new Error('画像サイズは5MB以下にしてください');
+    console.log('=== createProblem: User authenticated ===', user.id);
+
+    // 問題集の存在確認
+    const { data: problemSet, error: problemSetError } = await supabase
+      .from('problem_sets')
+      .select('id')
+      .eq('id', data.problemSetId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (problemSetError || !problemSet) {
+      console.error('=== createProblem: Problem set not found ===', problemSetError);
+      return { success: false, error: '問題集が見つかりません' };
     }
 
-    // ファイルタイプチェック
-    if (!questionImage.type.startsWith('image/') || !answerImage.type.startsWith('image/')) {
-      throw new Error('画像ファイルを選択してください');
+    console.log('=== createProblem: Problem set found ===', problemSet.id);
+
+    let questionImageUrl = null;
+    let answerImageUrl = null;
+
+    // 問題画像をSupabase Storageにアップロード
+    try {
+      console.log('=== createProblem: Processing question image ===');
+      
+      // Base64からバイナリデータに変換
+      const questionBase64Data = data.questionImageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      const questionBinaryData = Buffer.from(questionBase64Data, 'base64');
+      
+      // ファイル名を生成
+      const questionFileName = `problems/${data.problemSetId}/question_${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+      
+      console.log('=== createProblem: Uploading question image ===', questionFileName);
+      
+      const { data: questionUploadData, error: questionUploadError } = await supabase.storage
+        .from('images')
+        .upload(questionFileName, questionBinaryData, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600'
+        });
+
+      if (questionUploadError) {
+        console.error('=== createProblem: Question image upload error ===', questionUploadError);
+        return { success: false, error: '問題画像のアップロードに失敗しました' };
+      }
+
+      // 公開URLを取得
+      const { data: questionUrlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(questionFileName);
+
+      questionImageUrl = questionUrlData.publicUrl;
+      console.log('=== createProblem: Question image uploaded successfully ===', questionImageUrl);
+    } catch (questionImageError) {
+      console.error('=== createProblem: Question image processing error ===', questionImageError);
+      return { success: false, error: '問題画像の処理に失敗しました' };
     }
 
-    // 一意のファイル名を生成
-    const timestamp = Date.now();
-    const questionFileName = `${user.id}/${timestamp}_question_${questionImage.name}`;
-    const answerFileName = `${user.id}/${timestamp}_answer_${answerImage.name}`;
+    // 解答画像をSupabase Storageにアップロード
+    try {
+      console.log('=== createProblem: Processing answer image ===');
+      
+      // Base64からバイナリデータに変換
+      const answerBase64Data = data.answerImageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      const answerBinaryData = Buffer.from(answerBase64Data, 'base64');
+      
+      // ファイル名を生成
+      const answerFileName = `problems/${data.problemSetId}/answer_${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+      
+      console.log('=== createProblem: Uploading answer image ===', answerFileName);
+      
+      const { data: answerUploadData, error: answerUploadError } = await supabase.storage
+        .from('images')
+        .upload(answerFileName, answerBinaryData, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600'
+        });
 
-    // 画像をストレージにアップロード
-    const { error: questionUploadError } = await supabase.storage
-      .from('problem-images')
-      .upload(questionFileName, questionImage);
+      if (answerUploadError) {
+        console.error('=== createProblem: Answer image upload error ===', answerUploadError);
+        return { success: false, error: '解答画像のアップロードに失敗しました' };
+      }
 
-    if (questionUploadError) {
-      throw new Error('問題画像のアップロードに失敗しました');
+      // 公開URLを取得
+      const { data: answerUrlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(answerFileName);
+
+      answerImageUrl = answerUrlData.publicUrl;
+      console.log('=== createProblem: Answer image uploaded successfully ===', answerImageUrl);
+    } catch (answerImageError) {
+      console.error('=== createProblem: Answer image processing error ===', answerImageError);
+      return { success: false, error: '解答画像の処理に失敗しました' };
     }
 
-    const { error: answerUploadError } = await supabase.storage
-      .from('problem-images')
-      .upload(answerFileName, answerImage);
-
-    if (answerUploadError) {
-      throw new Error('解答画像のアップロードに失敗しました');
-    }
-
-    // 公開URLを取得
-    const { data: questionUrlData } = supabase.storage
-      .from('problem-images')
-      .getPublicUrl(questionFileName);
-
-    const { data: answerUrlData } = supabase.storage
-      .from('problem-images')
-      .getPublicUrl(answerFileName);
-
-    // 問題データをデータベースに保存
-    const { error: insertError } = await supabase
+    // 問題を作成
+    const { data: problem, error: insertError } = await supabase
       .from('problems')
       .insert({
-        problem_set_id: problemSetId,
-        question_image_url: questionUrlData.publicUrl,
-        answer_image_url: answerUrlData.publicUrl,
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-      });
+        problem_set_id: data.problemSetId,
+        question_image_url: questionImageUrl,
+        answer_image_url: answerImageUrl,
+        user_id: user.id
+      })
+      .select()
+      .single();
 
     if (insertError) {
-      throw insertError;
+      console.error('=== createProblem: Database insert error ===', insertError);
+      return { success: false, error: '問題の作成に失敗しました' };
     }
 
-    revalidatePath(`/problems/${encodeURIComponent(problemSetId)}`);
-    redirect(`/problems/${encodeURIComponent(problemSetId)}`);
+    console.log('=== createProblem: Problem created successfully ===', problem.id);
+    return { success: true };
+
   } catch (error) {
-    console.error('Error creating problem:', error);
-    throw new Error('問題の作成に失敗しました');
+    console.error('=== createProblem: Unexpected error ===', error);
+    return { success: false, error: '予期しないエラーが発生しました' };
   }
 } 
