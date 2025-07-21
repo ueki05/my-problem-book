@@ -3,12 +3,10 @@
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Upload, Plus, Image as ImageIcon } from "lucide-react";
-import { createProblem, testServerAction } from "@/app/actions";
-import { Input } from '@/components/ui/input';
+import { ArrowLeft, Plus, Image as ImageIcon } from "lucide-react";
+import { createProblem } from "@/app/actions";
 
 interface NewProblemPageProps {
   params: Promise<{
@@ -17,7 +15,6 @@ interface NewProblemPageProps {
 }
 
 export default function NewProblemPage({ params }: NewProblemPageProps) {
-  const [problemSetId, setProblemSetId] = useState<string>("");
   const [decodedProblemSetId, setDecodedProblemSetId] = useState<string>("");
   const [isPending, startTransition] = useTransition();
   const [questionImageFile, setQuestionImageFile] = useState<File | null>(null);
@@ -32,7 +29,6 @@ export default function NewProblemPage({ params }: NewProblemPageProps) {
     const getParams = async () => {
       const resolvedParams = await params;
       const decoded = decodeURIComponent(resolvedParams.problemSetId);
-      setProblemSetId(resolvedParams.problemSetId);
       setDecodedProblemSetId(decoded);
     };
     getParams();

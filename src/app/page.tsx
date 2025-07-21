@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/server';
 import { Database } from "@/lib/database.types";
 
 type ProblemSet = Database["public"]["Tables"]["problem_sets"]["Row"];
-type Problem = Database["public"]["Tables"]["problems"]["Row"];
 
 interface ProblemSetWithCount extends ProblemSet {
   problem_count: number;

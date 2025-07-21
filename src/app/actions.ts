@@ -108,7 +108,7 @@ export async function createProblem(data: {
       
       console.log('=== createProblem: Uploading question image ===', questionFileName);
       
-      const { data: questionUploadData, error: questionUploadError } = await supabase.storage
+              const { error: questionUploadError } = await supabase.storage
         .from('images')
         .upload(questionFileName, questionBinaryData, {
           contentType: 'image/jpeg',
@@ -145,7 +145,7 @@ export async function createProblem(data: {
       
       console.log('=== createProblem: Uploading answer image ===', answerFileName);
       
-      const { data: answerUploadData, error: answerUploadError } = await supabase.storage
+              const { error: answerUploadError } = await supabase.storage
         .from('images')
         .upload(answerFileName, answerBinaryData, {
           contentType: 'image/jpeg',

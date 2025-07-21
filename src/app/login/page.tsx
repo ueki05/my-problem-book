@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,9 +50,9 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Auth error:", err);
-      setError(err.message || "認証に失敗しました。");
+      setError(err instanceof Error ? err.message : "認証に失敗しました。");
     } finally {
       setIsLoading(false);
     }

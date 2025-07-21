@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, FileText, Image } from "lucide-react";
 
 type ProblemSet = Database["public"]["Tables"]["problem_sets"]["Row"];
@@ -90,7 +90,7 @@ export default async function ProblemSetPage({ params }: ProblemSetPageProps) {
               戻る
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{problemSet.title}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{problemSet.name}</h1>
               {problemSet.description && (
                 <p className="text-sm text-gray-600 mt-1">{problemSet.description}</p>
               )}
